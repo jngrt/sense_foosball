@@ -5,6 +5,7 @@ $(document).ready(function(){
 
   var matches = [];
   var players = [];
+  var ranking = [];
 
   function init(){
     
@@ -25,7 +26,9 @@ $(document).ready(function(){
       $(".container#main").show(); 
       $(".container#login").hide(); 
 
+      getPlayerList();
       updateMatchList();
+      updateRanking();
   }
 
   function updateMatchList(){
@@ -34,7 +37,8 @@ $(document).ready(function(){
 
   }
   function updateRanking(){
-
+    calculateRanking();
+    showRanking();
   }
   
   $("#login-form").on("submit",function(e){
@@ -52,8 +56,9 @@ $(document).ready(function(){
   
   function getPlayerList(){
     var params = { "last" : 1};
-    if (SenseApi.getSensorDataGet(PLAYERS_ID, params)) {
+    if (SenseApi.callSensorDataGet(PLAYERS_ID, params)) {
       players = JSON.parse(JSON.parse(SenseApi.getResponseData()).data[0].value);
+      console.log(players);
       return true;
     } else {
       $("p#error").html("Cannot get player list!");
@@ -61,12 +66,37 @@ $(document).ready(function(){
     }
 
   }
+  
+  function calculateRanking(){ 
+    
+    ranking = [];
+    ranking = players.sort(function(a,b){
+      if(a.rating > b.rating) return -1;
+      if(a.rating < b.rating) return 1;
+      return 0;
+    });
+
+  }
+  function showRanking(){
+    var html_string = "";
+    //rank, score, name
+    for( var i = 0;i<ranking.length;i++){
+      html_string += "<tr><td>"+(i+1)+"</td>"+
+                  "<td>"+ranking[i].rating+"</td>"+
+                  "<td>"+ranking[i].name+"</td></tr>";
+
+    }
+    $("#ranking").html(html_string);
+
+
+  }
+
   function getMatchList(){
       var params = {
               "sort" : "DESC"
       };
       if (SenseApi.callSensorDataGet(MATCHES_ID, params)) {
-        console.log(SenseApi.getResponseData());
+        //console.log(SenseApi.getResponseData());
               matches = JSON.parse(SenseApi.getResponseData()).data;
               return true;
       } else {
@@ -100,7 +130,7 @@ $(document).ready(function(){
                               "<td>" + win + "</td><td>" + score + "</td>"+
                               "<td>" + lose + "</td></tr>";
 	}
-        console.log(html_string);
+        //console.log(html_string);
         $("#match-history").html(html_string);
 
 
