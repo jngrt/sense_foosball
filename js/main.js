@@ -2,6 +2,7 @@ $(document).ready(function(){
 
   var PLAYERS_ID = 171759;
   var MATCHES_ID = 171760;
+  var K = 32;
 
   var matches = [];
   var players = [];
@@ -29,6 +30,7 @@ $(document).ready(function(){
       getPlayerList();
       updateMatchList();
       updateRanking();
+      showInputFields();
   }
 
   function updateMatchList(){
@@ -135,6 +137,130 @@ $(document).ready(function(){
 
 
   }
+
+  function showInputFields(){
+    
+      $("#score-block select").empty().append("<option value='-1'>Select a player</option>");
+
+      for( var i=0;i<players.length;i++){
+          $("#score-block select").append("<option value='"+i+"'>"+players[i].name+"</option>"); 
+      }
+
+      $("#submit").click(submit);
+  }
+
+  function submit(){
+    if( $("#team1player1").val() > -1 &&
+        $("#team2player1").val() > -1){
+      if( $("#team1player2").val() > -1 &&
+          $("#team2player2").val() > -1){
+        submit2v2();
+        return;
+      } 
+      submit1v1();
+      return;
+    }
+    alert("Select at least two players");
+
+  }
+
+
+  function submit1v1() {
+	var p1 = $("#team1player1").val();
+	var p2 = $("#team2player1").val();
+	
+	if (p1 == p2) {
+		alert("Select two different players!");
+		return;
+	}
+	
+	var score_t1 = parseInt($("input#team1score").val());
+	var score_t2 = parseInt($("input#team2score").val());
+	
+	console.log(players[p1].name+" vs "+players[p2].name+": "+score_t1+"-"+score_t2);
+	m = {"team1":[players[p1].name], "team2":[players[p2].name], "score":+score_t1+"-"+score_t2};
+	console.log(m);
+
+	var QA = Math.pow(10, players[p1].rating/400);
+	var QB = Math.pow(10, players[p2].rating/400);
+	var EA = QA/(QA+QB);
+	var EB = QB/(QA+QB);
+	var SA = (score_t1 > score_t2) ? 1 : 0;
+	var SB = 1 - SA;
+	var RA = players[p1].rating + K * (SA - EA);
+	console.log("QA: "+QA+" EA: "+EA+" SA: "+SA+" RA: "+RA);
+	var RB = players[p2].rating + K * (SB - EB);
+	console.log("QB: "+QB+" EB: "+EB+" SB: "+SB+" RB: "+RB);
+	
+	players[p1].rating = RA;
+	players[p2].rating = RB;
+	
+	SubmitMatch(m);
+	SubmitNewRatings();
+}
+
+  function submit2v2() {
+	var p1 = $("#team1player1").val();
+	var p2 = $("#team1player2").val();
+	var p3 = $("#team2player1").val();
+	var p4 = $("#team2player2").val();
+
+	if (p1 == p2 || p1 == p3 || p1 == p4 || p2 == p3 || p2 == p4 || p3 == p4) {
+		alert("Select four different players!");
+		return;
+	}
+
+	var t1 = (players[p1].rating+players[p2].rating)/2;
+	var t2 = (players[p3].rating+players[p4].rating)/2;
+
+	var score_t1 = parseInt($("input#team1score").val());
+	var score_t2 = parseInt($("input#team2score").val());
+	
+	console.log(players[p1].name+" vs "+players[p2].name+": "+score_t1+"-"+score_t2);
+
+	m = { "team1":[players[p1].name, players[p2].name], 
+              "team2":[players[p3].name, players[p4].name], 
+              "score":+score_t1+"-"+score_t2};
+
+	console.log(m);
+	
+	var QA = Math.pow(10, t1/400);
+	var QB = Math.pow(10, t2/400);
+	var EA = QA/(QA+QB);
+	var EB = QB/(QA+QB);
+	var SA = (score_t1 > score_t2) ? 1 : 0;
+	var SB = 1 - SA;
+	var mod_team1 = K * (SA - EA);
+	var mod_team2 = K * (SB - EB);
+
+	console.log("QA: "+QA+" EA: "+EA+" SA: "+SA+" mod_team1: "+mod_team1);
+	console.log("QB: "+QB+" EB: "+EB+" SB: "+SB+" mod_team2: "+mod_team2);
+	
+		
+	players[p1].rating += mod_team1/2;
+	players[p2].rating += mod_team1/2;
+	players[p3].rating += mod_team2/2;
+	players[p4].rating += mod_team2/2;
+	
+	console.log(players);
+	SubmitMatch(m);
+	SubmitNewRatings();
+}
+
+function SubmitNewRatings () {
+	if (SenseApi.callSensorDataPost(PLAYERS_ID, {"data":[{"value":players}]}))
+          console.log("ratings submit succes");
+	else 
+		alert("Submitting new rankings failed!");
+}
+
+function SubmitMatch(m) {
+	if (SenseApi.callSensorDataPost(MATCHES_ID, {"data":[{"value":m}]}))
+		return;
+	else
+		alert("Submitting match failed!");
+}
+
 
   init();
 });
