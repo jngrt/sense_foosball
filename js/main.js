@@ -49,7 +49,7 @@ $(document).ready(function(){
     console.log($("#login-form #password").val());
 
     var pass = $("#login-form #password").val();
-    var passhash = CryptoJS.MD5(pass);
+    var passhash = CryptoJS.MD5(pass).toString();
     if( SenseApi.authenticateSessionId("sense-foosball",passhash)){
       sessionStorage.setItem("sessionId", SenseApi.getSessionId());
       showMain();
